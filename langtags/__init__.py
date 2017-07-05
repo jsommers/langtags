@@ -1,5 +1,7 @@
 """
-validlang.py.
+langtags.py.
+
+FIXME
 
 Utility module with one function to check whether a language tag is
 well-formed according to BCP47 (https://tools.ietf.org/html/bcp47)
@@ -7,14 +9,13 @@ but not if it is valid.
 """
 import sys
 import re
+import os
 import enum
-import string
-from collections import Counter, defaultdict
-import codecs
+from copy import copy
+from collections import OrderedDict, defaultdict
 
 
 # based on http://schneegans.de/lv/
-
 _bcp47_regex = re.compile("""
 ^
 (
@@ -68,11 +69,13 @@ _bcp47_regex = re.compile("""
     )*
 
     (-
-      x(?P<privateusesubtags>-
-        (
-          [a-z0-9]{1,8}
-        )
-      )+
+      (?P<privateusesubtags>x
+        (-
+          (
+            [a-z0-9]{1,8}
+          )
+        )+
+      )
     )?
   )
   |
@@ -122,12 +125,9 @@ $
 """, re.VERBOSE|re.IGNORECASE)
 
 
-def well_formed_bcp47(s):
+def tag_is_well_formed(s):
     """Check whether a language tag is well-formed according to bcp47"""
-    mobj = _bcp47_regex.match(s)
-    if mobj is not None:
-        return mobj.groupdict()
-    return None
+    return _bcp47_regex.match(s) is not None
 
 
 def extract_language_subtag(s):
@@ -142,13 +142,17 @@ def extract_language_subtag(s):
     return normalize_language_tag(s).split('-')[0].lower()
 
 
-def normalize_language_tag(s):
+def normalize(s):
     """Attempt to modify language tag content to get it into the expected form."""
     return s.replace('_', '-').replace('/', '-')
 
 
-def is_language_tag_well_formed(s):
-    return well_formed_bcp47(s) is not None
+class InvalidSubtagError(Exception):
+    pass
+
+
+class MalformedTagError(Exception):
+    pass
 
 
 class SubtagRecordType(enum.IntEnum):
@@ -160,52 +164,52 @@ class SubtagRecordType(enum.IntEnum):
     Grandfathered = 6
     Redundant = 7
     Private = 8
+    Extensions = 9
+
+
+_regex_name_to_enum = OrderedDict([
+    ('language23', SubtagRecordType.Language),
+    ('language4', SubtagRecordType.Language),
+    ('language58', SubtagRecordType.Language),
+    ('extlang', SubtagRecordType.Extlang),
+    ('script', SubtagRecordType.Script),
+    ('region', SubtagRecordType.Region),
+    ('variant', SubtagRecordType.Variant),
+    ('grandfathered', SubtagRecordType.Grandfathered),
+    ('extensions', SubtagRecordType.Extensions),
+    ('privateusesubtags', SubtagRecordType.Private),
+    ('privateusetags', SubtagRecordType.Private),
+])
 
 
 class LanguageSubtagRegistry(object):
     def __init__(self):
         self._recs = {}
-
-    def lookup(self, subtag):
-        """Get the record corresponding to a particular subtag (e.g., en, es, CN, Latn)"""
-        subtag = subtag.lower()
-        for rectype in SubtagRecordType:
-            obj = self._recs[rectype].get(subtag, None)
-            if obj is not None:
-                return obj
-        return None
-
-    def lookup_language(self, subtag):
-        """
-        Get the record corresponding to a particular language subtag.
-
-        Only check Language record types.
-        Return the record or None if the subtag doesn't exist.
-        """
-        return self._recs[SubtagRecordType.Language].get(subtag, None)
-
-    def lookup_region(self, subtag):
-        """Get the record corresponding to a particular region subtag."""
-        return self._recs[SubtagRecordType.Region].get(subtag, None)
-
-    def lookup_full_tag(self, tag):
-        """Lookup subtag objects for each subtag in a full tag, e.g., zh-Hant-CN"""
-        objs = []
-        private = False
-        for subtag in normalize_language_tag(tag).split('-'):
-            if subtag == 'x':
-                private = True
-                continue
-
-            if private:
-                objs.append(SubtagRegistryRecord({'Type': 'private', 'Subtag': subtag}))
+        for e in SubtagRecordType:
+            if e == SubtagRecordType.Private:
+                self._recs[e] = defaultdict(str)
             else:
-                objs.append(self.lookup(subtag))
-        return objs
+                self._recs[e] = {}
 
-    def __contains__(self, subtag):
-        """Check whether the registry contains the given subtag (could be any type of subtag)"""
-        return self.lookup(subtag) is not None
+    def match(self, tag):
+        """Lookup subtag objects for each subtag in a full tag, e.g., zh-Hant-CN"""
+        mobj = re.match(_bcp47_regex, tag)
+        if mobj is None:
+            return None
+
+        objs = []
+        gdict = mobj.groupdict()
+        for k, v in _regex_name_to_enum.items():
+            if gdict[k] is not None:
+                if v == SubtagRecordType.Private:
+                    r = SubtagRegistryRecord({'Type': 'private', 
+                                              'Tag': gdict[k]})
+                else:
+                    r = self._recs[v].get(gdict[k].lower())
+                    if r is None:
+                        raise InvalidSubtagError(gdict[k])
+                objs.append(r)
+        return objs
 
     def __str__(self):
         result = []
@@ -244,15 +248,18 @@ class LanguageSubtagRegistry(object):
                 line = inp.readline()
             return _extract_info(xlines)
 
-        recs = defaultdict(dict)
         reg = LanguageSubtagRegistry()
-        reg._recs = recs
+        recs = reg._recs
 
-        with open(infile) as inp:
+        location = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+        with open(os.path.join(location, infile)) as inp:
             line = inp.readline()
             # first, eat first 2 lines to get to first record
             while not line.startswith('%%'):
                 line = inp.readline()
+
             while True:
                 xgroup = _load_group(inp)
                 if not xgroup:
@@ -300,46 +307,77 @@ class SubtagRegistryRecord(object):
         return self._subtag
 
     @property
+    def tag(self):
+        return self._tag
+
+    @property
     def macrolanguage(self):
         return self._macrolanguage
 
-    def is_language(self):
-        self._type == SubtagRecordType.Language
+    @property
+    def added(self):
+        return self._added
+
+    @property
+    def comments(self):
+        return self._comments
+
+    @property
+    def description(self):
+        return self._description
+
+    @property
+    def preferred_value(self):
+        return self._preferred_value
+
+    @property
+    def prefix(self):
+        return self._prefix
+
+    @property
+    def supress_script(self):
+        return self._supress_script
 
     def __str__(self):
-        return "{} {} ({})".format(self._subtag, self._description, self._type.name)
+        if self._type == SubtagRecordType.Region:
+            return self._subtag.upper()
+        elif self._type == SubtagRecordType.Script:
+            return self._subtag.capitalize()
+        return self._subtag.lower()
 
 
-def get_langreg():
-    return LanguageSubtagRegistry.load()
+class Tag(object):
+    def __init__(self, strtag='', should_normalize=False):
+        if strtag:
+            if should_normalize:
+                strtag = normalize(strtag)
+            subs = _registry.match(strtag)
+            if subs is None:
+                raise MalformedTagError(strtag)
+            else:
+                self._subtags = subs
+        else:
+            self._subtags = []
+
+        self._byrectype = {}
+        for s in self._subtags:
+            self._byrectype[s.rectype.name.lower()] = s
+
+    def __getattr__(self, attr):
+        if attr in self._byrectype:
+            return self._byrectype[attr]
+
+    def __getitem__(self, idx):
+        if idx < 0:
+            idx = len(self._subtags) + idx
+        return self._subtags[idx]
+
+    def __str__(self):
+        return "-".join([str(s) for s in self._subtags])
+
+    def __len__(self):
+        return len(self._subtags)
 
 
-if __name__ == '__main__':
-    # import sys
-    # print("> ", end='', flush=True)
-    # line = sys.stdin.readline()
-    # while line:
-    #     tag = line.strip()
-    #     result = well_formed_bcp47(tag)
-    #     print(result)
-    #     print("> ", end='', flush=True)
-    #     line = sys.stdin.readline()
-
-    reg = LanguageSubtagRegistry.load()
-    print(reg)
-    print('en' in reg)
-    print('eng' in reg)
-    print('cn' in reg)
-    print('zh' in reg)
-    rec = reg.lookup('far')
-    print(rec)
-    rec = reg.lookup('fa')
-    print(rec)
-
-    olist = reg.lookup_full_tag('zh-Hant-CN')
-    print([str(o) for o in olist])
-
-    olist = reg.lookup_full_tag('zh-Hant-CN-x-private1-private2')
-    print([str(o) for o in olist])
-
-    print(is_language_tag_well_formed('zh-Hant-CN-x-private1-private2'))
+# global object; the subtag registry
+_registry = LanguageSubtagRegistry.load()
