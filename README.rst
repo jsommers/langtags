@@ -48,9 +48,7 @@ A basic use-case is as follows::
     cy-GB
 
 
-This is a work in progress.  More docs are forthcoming.  
-
-More information on language tags can be found at the W3C: https://www.w3.org/International/articles/language-tags/.
+The code and documentation are both works in progress.
 
 
 License
