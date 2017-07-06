@@ -1,3 +1,4 @@
 build
 langtags.egg-info
 __pycache__
+*.pyc

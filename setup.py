@@ -1,4 +1,10 @@
+import sys
 from setuptools import setup
+
+if sys.version_info.major < 3:
+    print("langtags is a Python 3-only module.  Sorry!")
+    sys.exit()
+
 
 setup(
     name="langtags",
@@ -7,9 +13,7 @@ setup(
     maintainer_email='jsommers@colgate.edu',
     license="GPL v3",
     platforms=["any"],
-    description="Checks whether a language tag conforms to BCP 47; provides some methods for looking up tags in the IANA registry",
-    long_description="""
-""",
+    description="Provides simple format and content validation for language tags based on BCP 47 and the IANA language tag registry.",
     packages=['langtags'],
     include_package_data=True,
     package_data={'langtags': ['language-subtag-registry']},
