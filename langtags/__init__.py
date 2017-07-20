@@ -269,6 +269,12 @@ class LanguageSubtagRegistry(object):
                 recs[recobj.rectype][recobj.subtag.lower()] = recobj
         return reg
 
+    def entries(self, rectype):
+        """Get an iterator over registry entries of type rectype."""
+        if isinstance(rectype, SubtagRecordType):
+            return self._recs[rectype].items()
+        return None
+
 
 class SubtagRegistryRecord(object):
     def __init__(self, rec):
@@ -351,7 +357,7 @@ class Tag(object):
         if strtag:
             if should_normalize:
                 strtag = normalize(strtag)
-            subs = _registry.match(strtag)
+            subs = registry.match(strtag)
             if subs is None:
                 raise MalformedTagError(strtag)
             else:
@@ -380,4 +386,4 @@ class Tag(object):
 
 
 # global object; the subtag registry
-_registry = LanguageSubtagRegistry.load()
+registry = LanguageSubtagRegistry.load()
