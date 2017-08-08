@@ -1,13 +1,15 @@
 import unittest
 import langtags
 
+
 class LangTagsTests(unittest.TestCase):
     def testWellFormed(self):
         self.assertTrue(langtags.tag_is_well_formed("en"))
         self.assertTrue(langtags.tag_is_well_formed("en-Latn-US"))
-        self.assertTrue(langtags.tag_is_well_formed("en-Latn-US-x-private-tag"))
-        self.assertTrue(langtags.tag_is_well_formed("eng"))  # well-formed, but not valid
-        self.assertTrue(langtags.tag_is_well_formed("cn"))  # well-formed, but not valid
+        self.assertTrue(langtags.tag_is_well_formed(
+            "en-Latn-US-x-private-tag"))
+        self.assertTrue(langtags.tag_is_well_formed("eng"))
+        self.assertTrue(langtags.tag_is_well_formed("cn"))
         self.assertTrue(langtags.tag_is_well_formed("zh-Hant-CN"))
         self.assertTrue(langtags.tag_is_well_formed("far"))
         self.assertTrue(langtags.tag_is_well_formed("zh-yue"))
@@ -22,6 +24,9 @@ class LangTagsTests(unittest.TestCase):
         self.assertFalse(langtags.tag_is_well_formed("i-english"))
 
     def testWellFormedAndValid(self):
+        pass
+
+    def testTagConstruction(self):
         tag = langtags.Tag("i-klingon")
         self.assertEqual(str(tag), "i-klingon")
         self.assertEqual(tag.grandfathered.subtag, "i-klingon")

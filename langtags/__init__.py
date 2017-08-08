@@ -1,5 +1,7 @@
 """
-langtags.py.
+langtags module.
+
+Classes and functions for parsing and validating IANA language tags.
 
 FIXME
 
@@ -11,7 +13,6 @@ import sys
 import re
 import os
 import enum
-from copy import copy
 from collections import OrderedDict, defaultdict
 
 
@@ -122,28 +123,28 @@ _bcp47_regex = re.compile("""
   )
 )
 $
-""", re.VERBOSE|re.IGNORECASE)
+""", re.VERBOSE | re.IGNORECASE)
 
 
 def tag_is_well_formed(s):
-    """Check whether a language tag is well-formed according to bcp47"""
+    """Check whether a language tag is well-formed according to bcp47."""
     return _bcp47_regex.match(s) is not None
 
 
-def extract_language_subtag(s):
-    """
-    Return the language subtag (not any other subtags) as a string.
-
-    Do some normalization in order to try to get to a valid subtag:
-    Replace _ with - and / with -.
-    RFC5646 requires -, but many sites don't comply...  thanks.
-    Lower-case it for compatibility with language-subtag-registry.
-    """
-    return normalize_language_tag(s).split('-')[0].lower()
+def tag_is_valid(s):
+    """Check whether tag is well-formed and has valid contents."""
+    try:
+        Tag(s)
+    except InvalidSubtagError:
+        return False
+    except MalformedTagError:
+        return False
+    else:
+        return True
 
 
 def normalize(s):
-    """Attempt to modify language tag content to get it into the expected form."""
+    """Replace _ and / with - in an attempt to put tag in expected form."""
     return s.replace('_', '-').replace('/', '-')
 
 
@@ -192,7 +193,7 @@ class LanguageSubtagRegistry(object):
                 self._recs[e] = {}
 
     def match(self, tag):
-        """Lookup subtag objects for each subtag in a full tag, e.g., zh-Hant-CN"""
+        """Return subtag objects for each subtag in a full tag."""
         mobj = re.match(_bcp47_regex, tag)
         if mobj is None:
             return None
@@ -202,7 +203,7 @@ class LanguageSubtagRegistry(object):
         for k, v in _regex_name_to_enum.items():
             if gdict[k] is not None:
                 if v == SubtagRecordType.Private:
-                    r = SubtagRegistryRecord({'Type': 'private', 
+                    r = SubtagRegistryRecord({'Type': 'private',
                                               'Tag': gdict[k]})
                 else:
                     r = self._recs[v].get(gdict[k].lower())
@@ -214,7 +215,8 @@ class LanguageSubtagRegistry(object):
     def __str__(self):
         result = []
         for rectype in SubtagRecordType:
-            result.append("{}: {}".format(rectype.name, len(self._recs[rectype])))
+            result.append("{}: {}".format(
+                rectype.name, len(self._recs[rectype])))
         return ', '.join(result)
 
     @staticmethod
