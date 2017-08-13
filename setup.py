@@ -8,9 +8,10 @@ if sys.version_info.major < 3:
 
 setup(
     name="langtags",
-    version='2017.8.1',
+    version='2017.8.2',
     maintainer='Joel Sommers',
     maintainer_email='jsommers@colgate.edu',
+    url="https://github.com/jsommers/langtags",
     license="GPL v3",
     platforms=["any"],
     description="Provides simple format and content validation for language tags based on BCP 47 and the IANA language tag registry.",
