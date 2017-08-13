@@ -9,6 +9,9 @@ If you need to look up language tags by language name (e.g., obtain 'en' record 
 
 ``langtags`` is Python 3-only.
 
+.. image:: https://travis-ci.org/jsommers/langtags.svg?branch=master
+    :target: https://travis-ci.org/jsommers/langtags
+
 A basic use-case is as follows::
 
     >>> import langtags
