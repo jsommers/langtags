@@ -3,3 +3,6 @@ langtags.egg-info
 __pycache__
 *.pyc
 dist
+.coverage
+htmlcov
+update.sh
