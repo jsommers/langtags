@@ -8,7 +8,7 @@ if sys.version_info.major < 3:
 
 setup(
     name="langtags",
-    version='2017.7.1',
+    version='2017.8.1',
     maintainer='Joel Sommers',
     maintainer_email='jsommers@colgate.edu',
     license="GPL v3",
