@@ -8,7 +8,7 @@ if sys.version_info.major < 3:
 
 setup(
     name="langtags",
-    version='2017.8.2',
+    version='2017.9.1',
     maintainer='Joel Sommers',
     maintainer_email='jsommers@colgate.edu',
     url="https://github.com/jsommers/langtags",
@@ -17,7 +17,7 @@ setup(
     description="Provides simple format and content validation for language tags based on BCP 47 and the IANA language tag registry.",
     packages=['langtags'],
     include_package_data=True,
-    package_data={'langtags': ['language-subtag-registry']},
+    package_data={'': ['language-subtag-registry']},
     zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3",
