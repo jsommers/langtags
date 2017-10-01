@@ -12,6 +12,7 @@ from collections import OrderedDict, defaultdict
 import datetime
 
 __all__ = [
+    'LanguageSubtagRegistry',
     'InvalidSubtagError',
     'MalformedTagError',
     'Tag',
@@ -206,25 +207,28 @@ _regex_name_to_enum = OrderedDict([
 ])
 
 
-class _LanguageSubtagRegistry(object):
+class LanguageSubtagRegistry(object):
     """
     LanguageSubtagRegistry class.
 
-    Internal class that encapsulates the IANA language-subtag-registry.
+    Class that encapsulates the IANA language-subtag-registry.
     Provides methods to load the registry and match
     a string tag against entries in the registry.
     Users will normally use the Tag/Subtag classes instead of
     directly accessing the registry through this class.
     """
-    def __init__(self):
-        self._recs = {}
-        for e in SubtagRecordType:
-            if e == SubtagRecordType.Private:
-                self._recs[e] = defaultdict(str)
-            else:
-                self._recs[e] = {}
+    _inited = False
+    _recs = {}
 
-    def match(self, tag):
+
+    def __init__(self):
+        if not LanguageSubtagRegistry._inited:
+            LanguageSubtagRegistry._load()
+            LanguageSubtagRegistry._inited = True
+
+
+    @staticmethod
+    def match(tag):
         """Return Subtag objects for each subtag in a full tag."""
         mobj = re.match(_bcp47_regex, tag)
         if mobj is None:
@@ -239,14 +243,23 @@ class _LanguageSubtagRegistry(object):
                     r = Subtag({'Type': 'private',
                                 'Tag': gdict[k]})
                 else:
-                    r = self._recs[v].get(matched_subtag.lower())
+                    r = LanguageSubtagRegistry._recs[v].get(matched_subtag.lower())
                     if r is None:
                         raise InvalidSubtagError(gdict[k])
                 objs.append(r)
         return objs
 
+
     @staticmethod
-    def load(infile="language-subtag-registry"):
+    def itertags(recordtype):
+        xrecs = LanguageSubtagRegistry._recs.get(recordtype, None)
+        if xrecs is None:
+            raise ValueError("{} is not a valid SubtagRecordType".format(recordtype))
+        return iter(xrecs.values())
+
+
+    @staticmethod
+    def _load(infile="language-subtag-registry"):
         """Load the IANA registry; return new LanguageSubtagRegistry object."""
         def _extract_info(xlines):
             xdict = defaultdict(list)
@@ -277,9 +290,15 @@ class _LanguageSubtagRegistry(object):
                 line = inp.readline()
             return _extract_info(xlines)
 
-        reg = _LanguageSubtagRegistry()
-        recs = reg._recs
+        def _init_recs():
+            LanguageSubtagRegistry._recs = {}
+            for e in SubtagRecordType:
+                if e == SubtagRecordType.Private:
+                    LanguageSubtagRegistry._recs[e] = defaultdict(str)
+                else:
+                    LanguageSubtagRegistry._recs[e] = {}
 
+        _init_recs()
         location = os.path.realpath(
             os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
@@ -295,8 +314,7 @@ class _LanguageSubtagRegistry(object):
                     break
                 recobj = Subtag(xgroup)
                 # NB: put dict keys in lowercase
-                recs[recobj.rectype][recobj.subtag.lower()] = recobj
-        return reg
+                LanguageSubtagRegistry._recs[recobj.rectype][recobj.subtag.lower()] = recobj
 
 
 class Subtag(object):
@@ -446,7 +464,7 @@ class Tag(object):
     def __init__(self, strtag='', normalize=False):
         if normalize:
             strtag = _normalize(strtag)
-        subs = _registry.match(strtag)
+        subs = LanguageSubtagRegistry.match(strtag)
         # we only get here if strtag is well-formed
         self._subtags = subs
         self._byrectype = {}
@@ -472,5 +490,4 @@ class Tag(object):
         return len(self._subtags)
 
 
-# global object; the subtag registry
-_registry = _LanguageSubtagRegistry.load()
+LanguageSubtagRegistry()

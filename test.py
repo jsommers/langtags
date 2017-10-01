@@ -24,8 +24,6 @@ class LangTagsTests(unittest.TestCase):
         self.assertFalse(langtags.tag_is_well_formed("en-US-Latn"))
         self.assertFalse(langtags.tag_is_well_formed("i-english"))
 
-    def testWellFormedAndValid(self):
-        pass
 
     def testTagConstruction(self):
         tag = langtags.Tag("i-klingon")
@@ -127,6 +125,7 @@ class LangTagsTests(unittest.TestCase):
         with self.assertRaises(langtags.MalformedTagError):
             langtags.Tag()
 
+
     def testRepr(self):
         tag = langtags.Tag("cy-latn-gb")
         self.assertEqual(str(tag), "cy-Latn-GB")
@@ -149,10 +148,20 @@ class LangTagsTests(unittest.TestCase):
         xtag = eval(repr(tag))
         self.assertEqual(xtag.grandfathered.tag, 'i-klingon')
 
+
     def testTagIsValid(self):
         self.assertTrue(langtags.tag_is_valid("en"))
         self.assertFalse(langtags.tag_is_valid("en-XX"))
         self.assertFalse(langtags.tag_is_valid("13346"))
+
+
+    def testIterTags(self):
+        with self.assertRaises(ValueError):
+            langtags.LanguageSubtagRegistry.itertags(-1)
+            
+        titer = langtags.LanguageSubtagRegistry.itertags(langtags.SubtagRecordType.Language)
+        self.assertIsNotNone(titer is not None)
+        self.assertTrue(len(list(titer)) > 100) # safely > 100 lang tags
 
 
 if __name__ == '__main__':

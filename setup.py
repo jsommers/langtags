@@ -1,10 +1,6 @@
 import sys
 from setuptools import setup
 
-if sys.version_info.major < 3:
-    print("langtags is a Python 3-only module.  Sorry!")
-    sys.exit()
-
 
 setup(
     name="langtags",
@@ -20,9 +16,11 @@ setup(
     package_data={'': ['language-subtag-registry']},
     zip_safe=False,
     classifiers=[
+        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Text Processing :: Linguistic",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     ],
 )

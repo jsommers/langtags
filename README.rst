@@ -7,7 +7,6 @@ The langtags module is meant to be simple and efficient.  Its primary purpose is
 
 If you need to look up language tags by language name (e.g., obtain 'en' record from 'English'), the langcodes module is a good choice.  It is rather difficult, however, to use the langcodes module to determine whether a given language tag contains invalid subtags (i.e., subtags that don't exist in the IANA language subtag registry).  This module aims to be simpler, with strict BCP 47 compliance checking and validation.
 
-``langtags`` is Python 3-only.
 
 .. image:: https://travis-ci.org/jsommers/langtags.svg?branch=master
     :target: https://travis-ci.org/jsommers/langtags
@@ -86,6 +85,11 @@ A basic use-case is as follows::
     >>> tag = langtags.Tag('gd_GB', normalize=True)
     >>> print(tag)
     gd-GB
+    >>>
+    >>> # if there is a need, all records for any tag type can be iterated over
+    >>> tagiter = langtags.LanguageSubtagRegistry.itertags(langtags.SubtagRecordType.Language)
+    >>> # -> an iterator over language tag objects
+    >>>
 
 
 The code and documentation are both works in progress.
