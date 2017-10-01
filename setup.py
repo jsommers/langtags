@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="langtags",
-    version='2017.9.1',
+    version='2017.10.1',
     maintainer='Joel Sommers',
     maintainer_email='jsommers@colgate.edu',
     url="https://github.com/jsommers/langtags",
